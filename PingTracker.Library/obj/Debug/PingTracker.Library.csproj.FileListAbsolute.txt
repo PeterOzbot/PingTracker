@@ -1,0 +1,4 @@
+C:\Users\petero.GAMA-SYSTEM\Documents\GitHub\ValTech\PingTracker\PingTracker.Library\bin\Debug\PingTracker.Library.dll
+C:\Users\petero.GAMA-SYSTEM\Documents\GitHub\ValTech\PingTracker\PingTracker.Library\bin\Debug\PingTracker.Library.pdb
+C:\Users\petero.GAMA-SYSTEM\Documents\GitHub\ValTech\PingTracker\PingTracker.Library\obj\Debug\PingTracker.Library.dll
+C:\Users\petero.GAMA-SYSTEM\Documents\GitHub\ValTech\PingTracker\PingTracker.Library\obj\Debug\PingTracker.Library.pdb

@@ -1,0 +1,824 @@
+﻿<Window x:Class="PingTracker.WPF.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dataDisplay="clr-namespace:PingTracker.Library.DataDisplay;assembly=PingTracker.Library"
+        xmlns:ping="clr-namespace:PingTracker.Library.Ping;assembly=PingTracker.Library"
+        Title="MainWindow" WindowStyle = "None" AllowsTransparency="True" Height="700" Width="1200">
+    <Grid DataContext="{Binding}">
+        <Grid.Resources>
+            <!--Scrollbar Thumbs-->
+            <Style x:Key="ScrollThumbs" TargetType="{x:Type Thumb}">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type Thumb}">
+                            <Grid x:Name="Grid">
+                                <Rectangle HorizontalAlignment="Stretch" VerticalAlignment="Stretch" 
+                                           Width="Auto" Height="Auto" Fill="Transparent" />
+                                <Border x:Name="Rectangle1" 
+                                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch" 
+                                        Width="Auto" Height="Auto"  
+                                        Background="{TemplateBinding Background}" />
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="Tag" Value="Horizontal">
+                                    <Setter TargetName="Rectangle1" Property="Width" Value="Auto" />
+                                    <Setter TargetName="Rectangle1" Property="Height" Value="7" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!--ScrollBars-->
+            <Style x:Key="{x:Type ScrollBar}" TargetType="{x:Type ScrollBar}">
+                <Setter Property="Stylus.IsFlicksEnabled" Value="false" />
+                <Setter Property="Foreground" Value="#A9A9AA" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Width" Value="2" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type ScrollBar}">
+                            <Grid Background="Transparent" Margin="2">
+                                <Grid x:Name="GridRoot" Width="2" Background="{TemplateBinding Background}">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="0.00001*" />
+                                    </Grid.RowDefinitions>
+
+                                    <Track x:Name="PART_Track" Grid.Row="0" IsDirectionReversed="true" Focusable="false">
+                                        <Track.Thumb>
+                                            <Thumb x:Name="Thumb" Background="{TemplateBinding Foreground}" Style="{DynamicResource ScrollThumbs}" />
+                                        </Track.Thumb>
+                                        <Track.IncreaseRepeatButton>
+                                            <RepeatButton x:Name="PageUp" Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="false" />
+                                        </Track.IncreaseRepeatButton>
+                                        <Track.DecreaseRepeatButton>
+                                            <RepeatButton x:Name="PageDown" Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="false" />
+                                        </Track.DecreaseRepeatButton>
+                                    </Track>
+                                </Grid>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger SourceName="Thumb" Property="IsMouseOver" Value="true">
+                                    <Setter Value="{DynamicResource ButtonSelectBrush}" 
+                                            TargetName="Thumb"
+                                            Property="Background" />
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="true">
+                                    <Setter Value="{DynamicResource ButtonSelectBrush}" 
+                                            TargetName="Thumb"
+                                            Property="Background" />
+                                    <Trigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation
+                                                                    Storyboard.TargetName="GridRoot"
+                                                                    Storyboard.TargetProperty="Width"
+                                                                    To="10" Duration="0:0:0.5" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.EnterActions>
+                                    <Trigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation
+                                                                    Storyboard.TargetName="GridRoot"
+                                                                    Storyboard.TargetProperty="Width"
+                                                                    To="2" Duration="0:0:0" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.ExitActions>
+                                </Trigger>
+                                <Trigger SourceName="Thumb" Property="IsDragging" Value="true">
+                                    <Setter Value="{DynamicResource DarkBrush}" TargetName="Thumb" Property="Background" />
+                                </Trigger>
+
+                                <Trigger Property="IsEnabled" Value="false">
+                                    <Setter TargetName="Thumb" Property="Visibility" Value="Collapsed" />
+                                </Trigger>
+                                <Trigger Property="Orientation" Value="Horizontal">
+                                    <Setter TargetName="GridRoot" Property="LayoutTransform">
+                                        <Setter.Value>
+                                            <RotateTransform Angle="-90" />
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Setter TargetName="PART_Track" Property="LayoutTransform">
+                                        <Setter.Value>
+                                            <RotateTransform Angle="-90" />
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Setter Property="Width" Value="Auto" />
+                                    <Setter Property="Height" Value="12" />
+                                    <Setter TargetName="Thumb" Property="Tag" Value="Horizontal" />
+                                    <Setter TargetName="PageDown" Property="Command" Value="ScrollBar.PageLeftCommand" />
+                                    <Setter TargetName="PageUp" Property="Command" Value="ScrollBar.PageRightCommand" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style TargetType="Label" x:Key="PingerLabelStyle">
+                <Setter Property="FontSize" Value="18"/>
+                <Setter Property="FontFamily" Value="Segoe UI"/>
+            </Style>
+        </Grid.Resources>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="2"/>
+        </Grid.ColumnDefinitions>
+
+        <!--Header-->
+        <Grid Grid.Row="0" Grid.ColumnSpan="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!--Background-->
+            <Rectangle Grid.ColumnSpan="3" Fill="#0086DC" Height="40" MouseDown="Rectangle_MouseDown"/>
+
+            <!--Title-->
+            <Grid Grid.Column="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Label Grid.Column="1"
+                       Content="Ping Tracker" Foreground="White"
+                       Style="{StaticResource PingerLabelStyle}"
+                       FontSize="20" FontStyle="Normal" FontWeight="Light"
+                       HorizontalContentAlignment="Center" 
+                       IsHitTestVisible="False"/>
+
+                <!--Working Icon-->
+                <Button  Grid.Column="0" Command="{Binding Pinger.PauseCommand}">
+                    <Button.Template>
+                        <ControlTemplate>
+                            <Grid Background="Transparent">
+                                <Viewbox Height="20" Width="20" Margin="0,0,25,0">
+                                    <Grid>
+                                        <Path x:Name="IconRunning" 
+                                              Data="F1 M 20.8105,7.09424L 24.2607,33.1177L 15.9209,29.6714C 14.2021,33.7583 13.251,38.2466 13.251,42.9595C 13.251,61.9429 28.6406,77.3267 47.6201,77.3267C 53.2109,77.3267 58.4854,75.9829 63.1504,73.6147L 69.4775,79.9419C 63.0732,83.7349 55.6025,85.9204 47.6201,85.9204C 23.8936,85.9204 4.6582,66.688 4.6582,42.9595C 4.6582,37.0845 5.84277,31.4888 7.98047,26.3901L 0,23.0913L 20.8105,7.09424 Z M 47.6191,0.000488281C 71.3457,0.000488281 90.5791,19.2368 90.5791,42.9604C 90.5791,47.8813 89.748,52.6089 88.2227,57.0112L 96.0176,60.3472L 75.0029,76.0845L 71.8828,50.0181L 80.2969,53.6187C 81.3936,50.2642 81.9883,46.6821 81.9883,42.9604C 81.9883,23.9771 66.5986,8.59326 47.6191,8.59326C 43.3438,8.59326 39.2559,9.38037 35.4814,10.8052L 28.9404,4.26318C 34.5898,1.53076 40.9238,0.000488281 47.6191,0.000488281 Z "
+                                              RenderTransformOrigin=".5,.5">
+                                            <Path.RenderTransform>
+                                                <RotateTransform />
+                                            </Path.RenderTransform>
+                                            <Path.Style>
+                                                <Style TargetType="Path">
+                                                    <Setter Property="Fill" Value="#18C950"/>
+                                                    <Style.Triggers>
+
+                                                        <DataTrigger Binding="{Binding Pinger.RunningStatus}" Value="{x:Static ping:RunningStatus.Running}">
+                                                            <DataTrigger.EnterActions>
+                                                                <BeginStoryboard>
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation Storyboard.TargetProperty="(Path.RenderTransform).(RotateTransform.Angle)" 
+                                                                 To="-360" Duration="0:0:1" RepeatBehavior="Forever"/>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </DataTrigger.EnterActions>
+                                                            <DataTrigger.ExitActions>
+                                                                <BeginStoryboard>
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation Storyboard.TargetProperty="(Path.RenderTransform).(RotateTransform.Angle)" 
+                                                                     To="0" Duration="0"/>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </DataTrigger.ExitActions>
+
+                                                        </DataTrigger>
+
+                                                        <DataTrigger Binding="{Binding Pinger.RunningStatus}" Value="{x:Static ping:RunningStatus.StopedFaulted}">
+                                                            <Setter Property="Fill" Value="#9A1C1C"/>
+                                                        </DataTrigger>
+
+                                                        <DataTrigger Binding="{Binding Pinger.RunningStatus}" Value="{x:Static ping:RunningStatus.Paused}">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Path.Style>
+                                        </Path>
+                                        <Path x:Name="IconPaused" 
+                                              Data="F1 M 15.595,0C 11.1333,0.105133 7.44498,1.61493 4.53015,4.52927C 1.61526,7.44363 0.105225,11.1317 0,15.5933C 0.105225,20.0319 1.61526,23.7061 4.53015,26.6159C 7.44501,29.5257 11.1333,31.0338 15.595,31.14C 20.0335,31.0338 23.7074,29.5257 26.6168,26.6159C 29.5261,23.7061 31.0338,20.0319 31.14,15.5933C 31.0338,11.1317 29.5261,7.44363 26.6168,4.52927C 23.7074,1.6149 20.0335,0.105133 15.595,0 Z M 15.595,27.84C 12.1179,27.7513 9.22162,26.5492 6.90619,24.2338C 4.59082,21.9183 3.38873,19.0221 3.29999,15.5449C 3.38873,12.0699 4.59082,9.18195 6.90625,6.88116C 9.22162,4.58035 12.1179,3.38666 15.595,3.29999C 19.0701,3.38666 21.958,4.58038 24.2588,6.88116C 26.5596,9.18195 27.7533,12.0699 27.84,15.5449C 27.7533,19.0221 26.5596,21.9183 24.2588,24.2338C 21.958,26.5492 19.0701,27.7513 15.595,27.84 Z M 19.758,17.4811L 15.3046,17.4811C 14.7641,17.4811 14.3445,17.2875 14.0461,16.9003L 8.96344,11.3336C 8.315,10.4391 8.35333,9.65051 9.07843,8.96777C 9.8035,8.28506 10.6042,8.28305 11.4806,8.96173L 16.0307,13.9959L 19.758,13.9959C 20.9287,14.1412 21.4915,14.722 21.4461,15.7386C 21.4007,16.7551 20.838,17.3359 19.758,17.4811 Z "
+                                              Fill="#E5BA14">
+                                            <Path.Style>
+                                                <Style TargetType="Path">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Setter Property="Fill" Value="#18C950"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Pinger.RunningStatus}" Value="{x:Static ping:RunningStatus.Paused}">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Path.Style>
+                                        </Path>
+                                    </Grid>
+                                </Viewbox>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="IconRunning" Property="Fill" Value="#FF740A"/>
+                                    <Setter TargetName="IconPaused" Property="Fill" Value="#FF740A"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+
+
+            </Grid>
+
+            <!--Exit Button-->
+            <Button Grid.ColumnSpan="3" HorizontalAlignment="Right"
+                Margin="0,0,10,0" Click="Button_Click">
+                <Button.Template>
+                    <ControlTemplate>
+                        <Grid >
+                            <Viewbox Height="20" Width="20">
+                                <Path x:Name="Icon" Fill="#F9F9F9" 
+                          Data="F1 M 65.9326,51.4248C 65.6338,54.041 64.0215,56.0049 62.3359,55.8105C 60.6504,55.6162 59.5254,53.3369 59.8281,50.7227C 60.1289,48.1064 61.7393,46.1426 63.4277,46.3369C 65.1123,46.5322 66.2354,48.8096 65.9326,51.4248 Z M 35.5615,0L 95.5615,0.0107422L 54.9121,13.5615L 54.9121,96L 35.5615,96L 35.5615,66.6729L 53.2178,51L 35.5615,35.3271L 35.5615,0 Z M 41.5625,51.166L 23.8955,65.999L 23.8955,56.9873L 0,56.999L 0.00585938,44.999L 23.8955,44.9873L 23.8955,35.999L 41.5625,51.166 Z "></Path>
+                            </Viewbox>
+                            <Rectangle Fill="Transparent"></Rectangle>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="true">
+                                <Setter TargetName="Icon" Property="Fill" Value="#FF740A"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </Grid>
+
+        <!--Main Content-->
+        <Grid Grid.Row="1" Background="AliceBlue" Grid.Column="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="Auto"/>
+                <!--<ColumnDefinition Width="*"/>-->
+            </Grid.ColumnDefinitions>
+
+            <!--Data Display-->
+            <Grid Grid.Column="0" 
+                  Background="White"
+                  DataContext="{Binding Display}">
+
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <!--Sepparator-->
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!--URL-->
+                <Grid Grid.Row="0" Margin="10,25,10,0">
+                    <Grid.Resources>
+                        <Style x:Key="TwitterTextBoxStyle" TargetType="{x:Type TextBox}">
+                            <Setter Property="KeyboardNavigation.TabNavigation" Value="None" />
+                            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                            <Setter Property="AllowDrop" Value="true" />
+                            <Setter Property="Background" Value="White"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                            <Setter Property="FontFamily" Value="Trebuchet MS" />
+                            <Setter Property="FontSize" Value="15" />
+                            <Setter Property="UseLayoutRounding" Value="True"/>
+                            <Setter Property="Padding" Value="4" />
+                            <Setter Property="BorderThickness" Value="1" />
+                            <Setter Property="Foreground" Value="Black"/>
+                            <Setter Property="BorderBrush" Value="#FFAAAAAA" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="{x:Type TextBox}">
+                                        <ControlTemplate.Resources>
+                                            <Storyboard x:Key="FocusedOn">
+                                                <DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Storyboard.TargetName="FocusVisualElement" Storyboard.TargetProperty="(UIElement.Opacity)">
+                                                    <SplineDoubleKeyFrame KeyTime="00:00:00.1000000" Value="1" />
+                                                </DoubleAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                            <Storyboard x:Key="FocusedOff">
+                                                <DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Storyboard.TargetName="FocusVisualElement" Storyboard.TargetProperty="(UIElement.Opacity)">
+                                                    <SplineDoubleKeyFrame KeyTime="00:00:00.3000000" Value="0" />
+                                                </DoubleAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                            <Storyboard x:Key="DisabledOn">
+                                                <ObjectAnimationUsingKeyFrames BeginTime="00:00:00" Storyboard.TargetName="DisabledVisualElement" Storyboard.TargetProperty="(UIElement.Visibility)">
+                                                    <DiscreteObjectKeyFrame KeyTime="00:00:00.1000000" Value="{x:Static Visibility.Visible}" />
+                                                </ObjectAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                            <Storyboard x:Key="DisabledOff">
+                                                <ObjectAnimationUsingKeyFrames BeginTime="00:00:00" Storyboard.TargetName="DisabledVisualElement" Storyboard.TargetProperty="(UIElement.Visibility)">
+                                                    <DiscreteObjectKeyFrame KeyTime="00:00:00.1000000" Value="{x:Static Visibility.Collapsed}" />
+                                                </ObjectAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                        </ControlTemplate.Resources>
+                                        <Grid>
+                                            <Border Margin="3" x:Name="BorderBase" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="3" />
+                                            <Border Margin="0" Background="#FFECF5FD" x:Name="FocusVisualElement" BorderBrush="#FFECF5FD" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="7" IsHitTestVisible="False" Opacity="0" >
+                                                <Border Background="#FFE3F1FC" x:Name="InnerFocusVisualElement" BorderBrush="#FFE3F1FC" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="5" IsHitTestVisible="False" Opacity="1" >
+                                                    <Border Background="#FFD9ECFA" x:Name="InnerFocusVisualElement2" BorderBrush="#FFD9ECFA" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="3" IsHitTestVisible="False" Opacity="1" >
+                                                        <Border Background="{TemplateBinding Background}" x:Name="InnerFocusVisualElement3" BorderBrush="#FF7DBEF1" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="3" IsHitTestVisible="False" Opacity="1" >
+                                                        </Border>
+                                                    </Border>
+                                                </Border>
+                                            </Border>
+                                            <Label Foreground="DimGray"  Grid.Column="1" Margin="3" x:Name="TextPrompt" Content="{TemplateBinding Tag}" Visibility="Collapsed" Focusable="False"></Label>
+                                            <ScrollViewer Margin="3" x:Name="PART_ContentHost" Foreground="{TemplateBinding Foreground}" />
+                                            <Border Margin="3" x:Name="DisabledVisualElement" Background="#A5FFFFFF" BorderBrush="#59C0C0C0" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="3" IsHitTestVisible="False" Visibility="Collapsed" />
+                                            <Border Margin="3" x:Name="ReadOnlyVisualElement" Background="#66FFFFFF" CornerRadius="2.75" Visibility="Collapsed" />
+                                        </Grid>
+                                        <ControlTemplate.Triggers>
+                                            <MultiTrigger>
+                                                <MultiTrigger.Conditions>
+                                                    <Condition Property="IsFocused" Value="False"></Condition>
+                                                    <Condition Property="Text" Value=""></Condition>
+                                                </MultiTrigger.Conditions>
+                                                <MultiTrigger.Setters>
+                                                    <Setter Property="Visibility" TargetName="TextPrompt" Value="Visible"></Setter>
+                                                </MultiTrigger.Setters>
+                                            </MultiTrigger>
+                                            <Trigger Property="IsFocused" Value="True">
+                                                <Trigger.ExitActions>
+                                                    <BeginStoryboard Storyboard="{StaticResource FocusedOff}" x:Name="FocusedOff_BeginStoryboard" />
+                                                </Trigger.ExitActions>
+                                                <Trigger.EnterActions>
+                                                    <BeginStoryboard Storyboard="{StaticResource FocusedOn}" x:Name="FocusedOn_BeginStoryboard" />
+                                                </Trigger.EnterActions>
+                                            </Trigger>
+                                            <Trigger Property="IsEnabled" Value="False">
+                                                <Trigger.EnterActions>
+                                                    <BeginStoryboard Storyboard="{StaticResource DisabledOn}" x:Name="DisabledOn_BeginStoryboard" />
+                                                </Trigger.EnterActions>
+                                                <Setter Property="Foreground" Value="Silver" />
+                                            </Trigger>
+                                            <Trigger Property="IsEnabled" Value="True">
+                                                <Trigger.EnterActions>
+                                                    <BeginStoryboard Storyboard="{StaticResource DisabledOff}" />
+                                                </Trigger.EnterActions>
+                                                <Setter Property="Foreground" Value="#FF000000" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Grid.Resources>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox Grid.Row="0"  Grid.Column="1" 
+                             Style="{StaticResource TwitterTextBoxStyle}" 
+                             Text="{Binding UrlSelector.URL, UpdateSourceTrigger=PropertyChanged}">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding UrlSelector.UseURL}"/>
+                        </TextBox.InputBindings>
+                    </TextBox>
+                    <Label Grid.Row="0" Grid.Column="0" Content="Url:" Style="{StaticResource PingerLabelStyle}" FontSize="15"></Label>
+                    <Button Grid.Row="0" Grid.Column="1"
+                            HorizontalAlignment="Right"
+                            Margin="0,0,10,0" Command="{Binding UrlSelector.UseURL}">
+                        <Button.Template>
+                            <ControlTemplate>
+                                <Grid >
+                                    <Viewbox Height="15" Width="15">
+                                        <Path x:Name="Icon" Fill="#446D44" 
+                                              Data="F1 M 26.751,45.4141C 37.0566,45.4141 45.4189,37.0537 45.418,26.7471C 45.418,16.4414 37.0566,8.08008 26.751,8.08008C 16.4453,8.08008 8.08398,16.4414 8.08398,26.7471C 8.08301,37.0537 16.4453,45.4141 26.751,45.4141 Z M 49.4063,40.9199L 77.085,68.5977L 68.5996,77.084L 40.9219,49.4053C 36.8086,51.9834 31.9609,53.498 26.749,53.498C 11.9766,53.498 0,41.5215 0,26.75C 0,11.9766 11.9756,0 26.749,0C 41.5234,0 53.501,11.9766 53.5,26.748C 53.5,31.96 51.9844,36.8076 49.4063,40.9199 Z M 15.2686,18.8125C 18.4004,14.042 22.7471,11.3623 24.9785,12.8262C 27.21,14.291 26.4805,19.3457 23.3496,24.1182C 20.2178,28.8887 15.8701,31.5674 13.6387,30.1045C 11.4102,28.6426 12.1377,23.5801 15.2686,18.8125 Z "></Path>
+                                    </Viewbox>
+                                    <Rectangle Fill="Transparent"></Rectangle>
+                                </Grid>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="true">
+                                        <Setter TargetName="Icon" Property="Fill" Value="#FF740A"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </Grid>
+
+                <!--Bandwidth analysis-->
+                <Grid Grid.Row="1" DataContext="{Binding BandwidthAnalyzer}" Margin="0,25,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!--Title-->
+                    <Grid Grid.Row="0" Grid.ColumnSpan="2">
+                        <Label Content="Bandwidth Analysis" Style="{StaticResource PingerLabelStyle}" HorizontalContentAlignment="Center"/>
+                    </Grid>
+
+                    <!--Interfaces-->
+                    <Grid Grid.ColumnSpan="2" Grid.Row="1" HorizontalAlignment="Center">
+                        <ComboBox ItemsSource="{Binding InterfaceSelector.NetworkInterfaces}" SelectedItem="{Binding InterfaceSelector.SelectedInterface}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Label Content="{Binding Name}" Style="{StaticResource PingerLabelStyle}" FontSize="12" HorizontalContentAlignment="Stretch"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </Grid>
+
+                    <!--Result-->
+                    <Grid Grid.ColumnSpan="2" Grid.Row="2" HorizontalAlignment="Center">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!--Download-->
+                        <Grid Grid.Row="0" ToolTip="Download">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="40"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Grid Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Viewbox Height="15" Width="15">
+                                    <Path x:Name="DownloadIcon" Fill="#1E1E1E" Stretch="Uniform" 
+                                          Data="F1 M 107.475,521.172C 107.233,521.364 106.941,521.46 106.647,521.46C 106.354,521.46 106.061,521.364 105.818,521.172C 105.583,520.984 100.023,516.552 96.4619,511.251C 96.1872,510.841 96.1605,510.313 96.3912,509.879C 96.6232,509.445 97.0779,509.173 97.5699,509.173L 102.226,509.173C 102.713,506.261 103.639,502.865 103.977,502.388C 104.471,501.685 105.303,501.207 106.642,501.207C 107.981,501.207 108.813,501.685 109.309,502.388C 109.645,502.865 110.571,506.261 111.059,509.173L 115.723,509.173C 116.215,509.173 116.67,509.445 116.902,509.879C 117.134,510.313 117.106,510.841 116.831,511.251C 113.27,516.552 107.711,520.984 107.475,521.172 Z M 122.067,505.744C 122.226,504.961 122.31,504.153 122.31,503.324C 122.31,496.62 117.271,490.787 110.562,490.787C 106.181,490.787 101.95,493.513 99.8139,496.989C 99.4499,496.937 99.0832,496.903 98.7045,496.903C 94.3712,496.903 90.8645,500.408 90.8645,504.737C 90.8645,505.129 90.9019,505.511 90.9579,505.888C 88.2992,508.164 86.6672,511.443 86.6672,514.619C 86.6659,519.897 91.3219,525.489 97.2619,526.224C 103.47,526.813 109.719,526.813 115.926,526.224C 121.869,525.488 126.642,519.896 126.641,514.617C 126.641,511.377 124.823,508.025 122.067,505.744 Z ">
+                                    </Path>
+                                </Viewbox>
+                                <Rectangle Fill="Transparent"></Rectangle>
+                            </Grid>
+                            <!--Text-->
+                            <Label Grid.Column="1" Content="{Binding ResultData.Download}" 
+                                   Style="{StaticResource PingerLabelStyle}" FontSize="12"/>
+                        </Grid>
+
+                        <!--Upload-->
+                        <Grid Grid.Row="1" ToolTip="Upload">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="40"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!--Icon-->
+                            <Grid Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Viewbox Height="15" Width="15">
+                                    <Path x:Name="UploadIcon" Fill="#1E1E1E" Stretch="Uniform"
+                                          Data="F1 M 197.328,521.333C 195.989,521.333 195.159,520.856 194.664,520.153C 194.328,519.676 193.404,516.279 192.913,513.367L 188.265,513.367C 187.773,513.367 187.32,513.096 187.088,512.661C 186.856,512.227 186.883,511.7 187.159,511.292C 190.716,505.989 196.268,501.555 196.505,501.369C 196.989,500.984 197.677,500.984 198.161,501.369C 198.396,501.555 203.951,505.989 207.508,511.292C 207.781,511.7 207.809,512.227 207.579,512.661C 207.347,513.096 206.893,513.367 206.401,513.367L 201.743,513.367C 201.252,516.279 200.328,519.676 199.992,520.153C 199.497,520.856 198.664,521.333 197.328,521.333 Z M 212.792,505.744C 213.125,505.167 213.333,504.153 213.333,503.324C 213.333,496.62 207.599,490.667 200.896,490.667C 196.695,490.667 192.995,493.323 190.815,496.565C 190.541,496.536 190.265,496.521 189.984,496.521C 185.653,496.521 182.151,500.027 182.151,504.356C 182.151,504.731 182.185,505.096 182.237,505.459C 179.281,507.737 177.331,511.237 177.333,514.619C 177.331,519.896 182.076,525.489 188.008,526.224C 194.211,526.813 200.453,526.813 206.656,526.224C 212.591,525.489 217.333,519.896 217.333,514.617C 217.333,511.377 215.541,508.025 212.792,505.744 Z ">
+                                    </Path>
+                                </Viewbox>
+                                <Rectangle Fill="Transparent"></Rectangle>
+                            </Grid>
+                            <!--Text-->
+                            <Label Grid.Column="1" Content="{Binding ResultData.Upload}" 
+                                   Style="{StaticResource PingerLabelStyle}" FontSize="12"/>
+                        </Grid>
+                    </Grid>
+
+                    <!--Commands-->
+                    <Grid Grid.Row="0" Grid.ColumnSpan="2"
+                          HorizontalAlignment="Right">
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!--Stop-->
+                        <Button Margin="0,0,10,0" Grid.Column="0"
+                                Command="{Binding StopAnalysisCommand}">
+                            <Button.Template>
+                                <ControlTemplate>
+                                    <Grid >
+                                        <Viewbox Height="15" Width="15">
+                                            <Path x:Name="Icon" Fill="#446D44" RenderTransformOrigin=".5,.5"
+                                                  Data="F1 M 66.7012,1.52588e-005C 29.8561,-0.0306854 0,29.8281 0,66.6295C 0,103.483 29.8561,133.34 66.7012,133.329C 103.509,133.34 133.365,103.48 133.333,66.6295C 133.365,29.8281 103.51,-0.0306854 66.7012,1.52588e-005 Z M 12.959,77.5416L 12.959,55.6452L 120.589,55.6452L 120.589,77.5416L 12.959,77.5416 Z ">
+                                                <Path.RenderTransform>
+                                                    <RotateTransform/>
+                                                </Path.RenderTransform>
+                                            </Path>
+                                        </Viewbox>
+                                        <Rectangle Fill="Transparent"></Rectangle>
+                                    </Grid>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Icon" Property="Fill" Value="#FF740A"/>
+                                        </Trigger>
+                                        <DataTrigger Binding="{Binding Working}" Value="False">
+                                            <Setter TargetName="Icon" Property="Visibility" Value="Collapsed"/>
+                                            <Setter TargetName="Icon" Property="IsHitTestVisible" Value="False"/>
+                                        </DataTrigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+
+                        <!--Start-->
+                        <Button Margin="0,0,10,0" Grid.Column="1"
+                                Command="{Binding StartAnalysisCommand}">
+                            <Button.Template>
+                                <ControlTemplate>
+                                    <Grid >
+                                        <Viewbox Height="15" Width="15">
+                                            <Path x:Name="Icon" Fill="#446D44" RenderTransformOrigin=".5,.5"
+                                              Data="F1 M 15.3603,0C 11.0453,0.112335 7.4353,1.64319 4.53018,4.59241C 1.62506,7.54169 0.115021,11.2351 0,15.6728C 0.115021,20.0642 1.62506,23.7126 4.53018,26.6181C 7.4353,29.5235 11.0453,31.0308 15.3603,31.14C 19.95,31.0308 23.7006,29.5235 26.6123,26.6181C 29.5241,23.7126 31.0274,20.0642 31.1223,15.6728C 31.0274,11.2351 29.5241,7.54169 26.6123,4.59241C 23.7006,1.64316 19.95,0.112335 15.3603,0 Z M 16.2244,28.32L 16.2244,21.975C 17.7896,21.9244 19.3549,21.8233 20.9202,21.6715C 20.6015,22.9204 20.065,24.3062 19.3107,25.8288C 18.5565,27.3514 17.5277,28.1818 16.2244,28.32 Z M 11.4263,25.1227C 10.8772,24.0992 10.4655,22.9489 10.1909,21.6715C 11.5712,21.8233 12.9743,21.9244 14.4002,21.975L 14.4002,28.32C 13.7787,28.2975 13.2145,27.9859 12.7074,27.3854C 12.2003,26.7849 11.7732,26.0306 11.4263,25.1227 Z M 2.9762,17.3497C 2.89618,16.836 2.86417,16.2771 2.88016,15.6728C 2.88818,14.464 3.06421,13.2385 3.4082,11.9962C 3.89923,12.2187 4.50125,12.4289 5.21429,12.6267C 5.92737,12.8246 6.82941,13.0353 7.92047,13.2587C 7.7674,14.1147 7.69632,14.9647 7.70731,15.8087C 7.70731,17.0627 7.8056,18.2712 8.00232,19.4345C 6.56586,19.172 5.43375,18.8472 4.60599,18.4601C 3.7782,18.0729 3.21185,17.7028 2.90701,17.3497L 2.9762,17.3497 Z M 9.47729,15.8087C 9.49261,15.0443 9.50797,14.2617 9.52332,13.461C 11.1031,13.6548 12.7287,13.7729 14.4002,13.815L 14.4002,20.205C 12.8514,20.1672 11.3024,20.0161 9.75336,19.7518C 9.56934,18.4827 9.47729,17.1684 9.47729,15.8087 Z M 14.3084,2.97476L 14.4002,2.97476L 14.4002,12.045C 12.8284,11.9962 11.2794,11.8987 9.75336,11.7524C 10.1358,9.47876 10.7282,7.56473 11.5305,6.01038C 12.3328,4.45599 13.2588,3.44412 14.3084,2.97476 Z M 17.5372,3.65747C 18.4071,4.43671 19.1792,5.53592 19.8535,6.9552C 20.5278,8.37445 21.0349,9.97351 21.3747,11.7524C 19.6831,11.8987 17.9664,11.9962 16.2244,12.045L 16.2244,2.97476C 16.4053,2.98492 16.6115,3.06213 16.8429,3.20642C 17.0743,3.35065 17.3057,3.50104 17.5372,3.65747 Z M 16.2244,20.205L 16.2244,13.815C 18.0842,13.7644 19.8683,13.6633 21.5766,13.5115C 21.6188,14.2701 21.6357,15.0359 21.6273,15.8087C 21.6525,17.2062 21.5514,18.5356 21.3242,19.7971C 19.6747,20.0237 17.9748,20.1597 16.2244,20.205 Z M 23.299,13.2587C 24.2618,13.1449 25.1259,12.9679 25.8911,12.7277C 26.6564,12.4874 27.2697,12.2599 27.7309,12.045C 28.1118,13.2946 28.3023,14.5038 28.3023,15.6728C 28.3977,16.6359 28.1593,17.4177 27.587,18.0182C 27.0148,18.6187 25.5363,19.1059 23.1515,19.4798C 23.3072,18.3015 23.3891,17.0778 23.3973,15.8087C 23.4137,14.9647 23.3809,14.1147 23.299,13.2587 Z M 27.0642,10.3382C 26.8918,10.4866 26.4984,10.6653 25.8842,10.8746C 25.2699,11.0839 24.3262,11.3115 23.0531,11.5573C 22.5845,8.33887 21.6042,5.75433 20.1123,3.80377C 21.6698,4.35645 23.0478,5.20169 24.2463,6.33954C 25.4449,7.47736 26.3842,8.81027 27.0642,10.3382 Z M 6.55521,6.72964C 7.2066,6.03983 7.89703,5.48108 8.62659,5.05334C 9.35611,4.62564 10.1151,4.22537 10.9036,3.85254C 9.53314,5.81937 8.58243,8.3714 8.05145,11.5086C 6.66946,11.1408 5.70303,10.8889 5.15213,10.7527C 4.60126,10.6166 4.23688,10.4622 4.05908,10.2895C 4.62711,8.98096 5.45914,7.79434 6.55521,6.72964 Z M 6.55521,24.5324C 5.21112,23.1841 4.20306,21.5906 3.53104,19.7518C 4.74457,20.3654 6.34973,20.9042 8.34647,21.3681C 8.82355,23.7591 9.58389,25.7484 10.6276,27.3362C 9.12354,26.7213 7.76605,25.7867 6.55521,24.5324 Z M 24.5878,24.5324C 23.3875,25.7867 21.9798,26.7213 20.3648,27.3362C 21.5145,25.74 22.3286,23.7675 22.8073,21.4187C 24.6245,21.0088 26.1704,20.5136 27.4452,19.933C 26.8499,21.696 25.8975,23.2291 24.5878,24.5324 Z ">
+                                                <Path.RenderTransform>
+                                                    <RotateTransform/>
+                                                </Path.RenderTransform>
+                                            </Path>
+                                        </Viewbox>
+                                        <Rectangle Fill="Transparent"></Rectangle>
+                                    </Grid>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="true">
+                                            <Setter TargetName="Icon" Property="Fill" Value="#FF740A"/>
+                                        </Trigger>
+                                        <DataTrigger Binding="{Binding Working}" Value="True">
+                                            <Setter TargetName="Icon" Property="Fill" Value="#9A1C1C"/>
+                                            <DataTrigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetName="Icon"
+                                                                     Storyboard.TargetProperty="(Path.RenderTransform).(RotateTransform.Angle)" 
+                                                                     To="-360" Duration="0:0:1" RepeatBehavior="Forever"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.EnterActions>
+                                            <DataTrigger.ExitActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetName="Icon"
+                                                                     Storyboard.TargetProperty="(Path.RenderTransform).(RotateTransform.Angle)" 
+                                                                     To="0" Duration="0"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.ExitActions>
+                                        </DataTrigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </Grid>
+                </Grid>
+
+                <!--Average Text-->
+                <Grid Grid.Row="2" Margin="25,25,25,10" ToolTip="Average of the last 50 pings.">
+
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Label Grid.Column="0" Content="Average Latency:" Style="{StaticResource PingerLabelStyle}"/>
+                    <Label Grid.Column="1" Content="{Binding Average}" ToolTip="{Binding Average}"  Style="{StaticResource PingerLabelStyle}"/>
+                </Grid>
+
+                <!--Log-->
+                <Grid Grid.Row="3">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!--Title-->
+                    <Label Grid.Row="0" Content="Log" HorizontalContentAlignment="Center" Style="{StaticResource PingerLabelStyle}"/>
+                    <Border  Grid.Row="0" BorderThickness="0,0,0,1">
+                        <Border.BorderBrush>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1" >
+                                <GradientStop Color="white" Offset="0.1" />
+                                <GradientStop Color="#7b7b7b" Offset="0.25" />
+                                <GradientStop Color="#5c5c5c" Offset="0.50" />
+                                <GradientStop Color="#7b7b7b" Offset="0.75" />
+                                <GradientStop Color="white" Offset="1.0" />
+                            </LinearGradientBrush>
+                        </Border.BorderBrush>
+                    </Border>
+
+                    <!--List-->
+                    <ScrollViewer Grid.Row="1" Margin="10,0,5,20"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl Grid.Row="1" ItemsSource="{Binding Loger.LogHistory}" VirtualizingPanel.IsVirtualizing="True">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid x:Name="ItemLayout" ToolTip="{Binding MessageStatusDetails.DetailedInformation}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="35"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Rectangle x:Name="LayoutColorLayer" Grid.ColumnSpan="2" Opacity="0.2"/>
+                                        <Rectangle x:Name="LayoutAnimationColorLayer" Grid.ColumnSpan="2" Opacity="0">
+                                            <Rectangle.Fill>
+                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1" >
+                                                    <GradientStop Color="white" Offset="0.1" />
+                                                    <GradientStop Color="#1FFC64" Offset="0.25" />
+                                                    <GradientStop Color="#18C950" Offset="0.50" />
+                                                    <GradientStop Color="#1FFC64" Offset="0.75" />
+                                                    <GradientStop Color="white" Offset="1.0" />
+                                                </LinearGradientBrush>
+                                            </Rectangle.Fill>
+                                        </Rectangle>
+                                        <!--Text-->
+                                        <Label Content="{Binding Text}" 
+                                               Grid.ColumnSpan="2"
+                                               HorizontalContentAlignment="Center"
+                                               x:Name="LogTextLabel"
+                                               Style="{StaticResource PingerLabelStyle}" FontSize="15">
+                                        </Label>
+                                        <!--Icon-->
+                                        <Viewbox  Margin="10,0,0,0" Height="15" Width="15" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                            <Path x:Name="LogMessageIcon"></Path>
+                                        </Viewbox>
+
+
+
+                                    </Grid>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding MessageStatusDetails.Status}" Value="{x:Static dataDisplay:MessageStatus.Warning}">
+                                            <Setter TargetName="LogTextLabel" Property="Foreground" Value="#E5BA14"/>
+                                            <Setter TargetName="LogMessageIcon" Property="Fill" Value="#E5BA14"/>
+                                            <Setter TargetName="LogMessageIcon" Property="Data" Value="F1 M 34.7541,26.4939L 20.5932,1.72809C 19.9132,0.624023 18.9211,0.0480042 17.6171,0C 16.265,0.0480042 15.2729,0.624023 14.6409,1.72809L 0.480042,26.4939C 0.151978,27.0559 -0.00799561,27.6424 0,28.2534C 0.0289917,29.2073 0.378998,29.9982 1.05005,30.6259C 1.72107,31.2536 2.53915,31.579 3.50421,31.6022L 31.7299,31.6022C 32.693,31.5848 33.503,31.271 34.1601,30.6607C 34.8171,30.0504 35.1591,29.248 35.1861,28.2534C 35.1861,27.6424 35.0421,27.0559 34.7541,26.4939 Z M 15.0729,8.06448L 20.2092,8.06448L 20.2092,19.7072L 15.0729,19.7072L 15.0729,8.06448 Z M 17.665,22.4372C 18.4991,22.4576 19.1832,22.7468 19.7172,23.3048C 20.2512,23.8628 20.5272,24.5674 20.5453,25.4186C 20.5272,26.2444 20.2512,26.9266 19.7172,27.4652C 19.1832,28.0039 18.4991,28.2829 17.665,28.3022C 16.831,28.2829 16.147,28.0039 15.6129,27.4653C 15.0789,26.9266 14.8029,26.2444 14.7849,25.4186C 14.8029,24.546 15.0789,23.8353 15.6129,23.2864C 16.147,22.7376 16.831,22.4545 17.665,22.4372 Z "/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding MessageStatusDetails.Status}" Value="{x:Static dataDisplay:MessageStatus.Critical}">
+                                            <Setter TargetName="LogTextLabel" Property="Foreground" Value="#9A1C1C"/>
+                                            <Setter TargetName="LogMessageIcon" Property="Fill" Value="#9A1C1C"/>
+                                            <Setter TargetName="LogMessageIcon" Property="Data" Value="F1 M 18.0011,25.9619L 13.3448,25.9619L 13.3448,12.9L 18.0011,12.9L 18.0011,25.9619 Z M 15.649,10.56C 14.8629,10.5387 14.2149,10.2495 13.7048,9.69214C 13.1948,9.13486 12.9308,8.43716 12.9128,7.59912C 12.9308,6.7876 13.1948,6.11328 13.7048,5.57608C 14.2149,5.03891 14.8629,4.76019 15.649,4.73999C 16.435,4.76022 17.0831,5.03891 17.5931,5.57611C 18.1031,6.11328 18.3671,6.7876 18.3851,7.59912C 18.3671,8.4595 18.1031,9.16357 17.5931,9.7113C 17.0831,10.259 16.435,10.5419 15.649,10.56 Z M 15.601,0C 11.1707,0.108398 7.49048,1.63821 4.56027,4.58942C 1.6301,7.54062 0.110046,11.2628 0,15.7559C 0.110046,20.0614 1.6301,23.666 4.56027,26.5695C 7.49045,29.4731 11.1707,30.9826 15.601,31.0981C 20.0102,30.9826 23.6844,29.4731 26.6236,26.5695C 29.5628,23.666 31.0889,20.0614 31.2019,15.7559C 31.0889,11.2628 29.5628,7.54062 26.6236,4.58942C 23.6844,1.63821 20.0102,0.108398 15.601,0 Z "/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Current}" Value="True">
+                                            <Setter TargetName="LayoutColorLayer" Property="Fill">
+                                                <Setter.Value>
+                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1" >
+                                                        <GradientStop Color="white" Offset="0.1" />
+                                                        <GradientStop Color="#1FFC64" Offset="0.25" />
+                                                        <GradientStop Color="#18C950" Offset="0.50" />
+                                                        <GradientStop Color="#1FFC64" Offset="0.75" />
+                                                        <GradientStop Color="white" Offset="1.0" />
+                                                    </LinearGradientBrush>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <DataTrigger.ExitActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation
+                                                                    Storyboard.TargetName="LayoutAnimationColorLayer"
+                                                                     Storyboard.TargetProperty="Opacity"
+                                                                     From="0" To="0.2" Duration="0:0:0" />
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.ExitActions>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Current}" Value="False">
+                                            <DataTrigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation
+                                                                    Storyboard.TargetName="LayoutAnimationColorLayer"
+                                                                     Storyboard.TargetProperty="Opacity"
+                                                                     From="0.2" To="0" Duration="0:0:5" />
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.EnterActions>
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+
+                <!--Sepparator-->
+                <Border  Grid.RowSpan="4" Margin="5,0,0,0" Grid.Column="1" 
+                         BorderThickness="0,0,1,0" BorderBrush="#9A9A9A" Opacity="0.8"/>
+            </Grid>
+
+            <!--Graph-->
+            <Grid Grid.Column="1" Margin="40,0,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <ScrollViewer Grid.Row="1" Grid.RowSpan="2" Grid.Column="1"
+                              Width="{Binding Graph.FullWidth}"
+                              HorizontalScrollBarVisibility="Visible" 
+                              VerticalScrollBarVisibility="Disabled"
+                              x:Name="GraphScrollViewer">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+
+                        <Border BorderThickness="1,0,0,1" Opacity="0.5"
+                                BorderBrush="Black" Grid.Row="0">
+                        </Border>
+
+                        <Canvas x:Name="canvas" Grid.RowSpan="2"
+                                Width="{Binding Graph.Width}"
+                                Height="{Binding Graph.Height}">
+
+                            <Polyline x:Name="polyline" Stroke="DarkGreen" StrokeThickness="1" />
+                            <Polyline x:Name="average" Stroke="Red" StrokeThickness="1" />
+                        </Canvas>
+
+
+
+
+                        <ItemsControl x:Name="XAxis"  Grid.Row="1"
+                                      Background="{Binding Graph.X_Axis.Background}"
+                                      ItemsSource="{Binding Graph.X_Axis.Numbering}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Width="{Binding Width}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <Label HorizontalContentAlignment="Left" Grid.Column="0" Margin="0,0,0,0"
+                                                   Foreground="Black" FontSize="11" Content="{Binding Value}" 
+                                                   Style="{StaticResource PingerLabelStyle}"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+                </ScrollViewer>
+
+
+                <ItemsControl  Margin="10,0,5,42"  x:Name="YAxis"  
+                               Grid.Row="1"  Grid.RowSpan="2" Grid.Column="0"
+                               Background="{Binding Graph.Y_Axis.Background}" 
+                               ItemsSource="{Binding Graph.Y_Axis.Numbering}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Height="{Binding Width}">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <Label VerticalContentAlignment="Bottom" Grid.Row="1" Margin="0,0,0,0"
+                                       Foreground="Black" FontSize="11" Content="{Binding Value}" Style="{StaticResource PingerLabelStyle}"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
+
+
+            <!--EmptySpace-->
+            <!--<Grid  Grid.Column="2" Grid.RowSpan="3" Background="Transparent">
+                <Border BorderThickness="1,0,0,0" BorderBrush="#9A9A9A" Opacity="0.8"/>
+            </Grid>-->
+
+        </Grid>
+
+        <!--Left & Right border-->
+        <Rectangle Grid.Column="0" Fill="#0086DC" Width="2" Grid.RowSpan="3"/>
+        <Rectangle Grid.Column="2" Fill="#0086DC" Width="2" Grid.RowSpan="3"/>
+
+        <!--Footer-->
+        <Rectangle Grid.Row="2" Fill="#0086DC" Height="5" Grid.ColumnSpan="3"/>
+    </Grid>
+</Window>
